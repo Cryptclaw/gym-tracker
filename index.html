@@ -4,22 +4,173 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Gym Tracker</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#f4f4f5}*{box-sizing:border-box}body{margin:0}.top{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;z-index:5;padding:14px 16px 10px}.top h1{margin:0 0 10px;font-size:22px}.tabs{display:flex;gap:7px}.tab{flex:1;border:0;border-radius:10px;padding:10px;background:#eee;font-weight:700}.tab.active{background:#111;color:#fff}.wrap{max-width:700px;margin:auto;padding:14px}.card{background:#fff;border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 1px 3px #0001}.name{font-size:18px;font-weight:800}.meta{font-size:13px;color:#666;margin:4px 0 12px}.inputs{display:grid;grid-template-columns:90px repeat(4,1fr);gap:7px;align-items:center}.inputs input{width:100%;padding:10px 6px;border:1px solid #ccc;border-radius:9px;text-align:center;font-size:16px}.inputs .lbl{font-size:12px;color:#666}.last{font-size:13px;background:#f5f5f5;border-radius:9px;padding:8px;margin-top:9px}.actions{margin:24px 0 30px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px #0001}.actions-title{font-weight:800;margin-bottom:10px}.actions-row{display:flex;gap:8px}.actions button{flex:1;border:0;border-radius:12px;padding:14px;font-weight:800}.save{background:#111;color:#fff}.secondary{background:#eee}.section-title{font-weight:800;margin:10px 2px}.note{width:100%;min-height:70px;border:1px solid #ccc;border-radius:10px;padding:10px;font:inherit}.stat{display:flex;gap:8px}.stat>div{flex:1;background:#fff;border-radius:12px;padding:12px}.small{font-size:12px;color:#666}.big{font-size:20px;font-weight:800}.history{background:#fff;border-radius:12px;padding:12px;margin-bottom:8px}.history b{font-size:14px}
-</style></head>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#f4f4f5}*{box-sizing:border-box}body{margin:0}.top{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;z-index:5;padding:14px 16px 10px}.top h1{margin:0 0 10px;font-size:22px}.tabs{display:flex;gap:7px}.tab{flex:1;border:0;border-radius:10px;padding:10px;background:#eee;font-weight:700}.tab.active{background:#111;color:#fff}.wrap{max-width:700px;margin:auto;padding:14px}.card{background:#fff;border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 1px 3px #0001}.name{font-size:18px;font-weight:800}.meta{font-size:13px;color:#666;margin:4px 0 12px}.inputs{display:grid;grid-template-columns:90px repeat(4,1fr);gap:7px;align-items:center}.inputs input{width:100%;padding:10px 6px;border:1px solid #ccc;border-radius:9px;text-align:center;font-size:16px}.inputs .lbl{font-size:12px;color:#666}.last{font-size:13px;background:#f5f5f5;border-radius:9px;padding:8px;margin-top:9px}.section-title{font-weight:800;margin:10px 2px}.note{width:100%;min-height:70px;border:1px solid #ccc;border-radius:10px;padding:10px;font:inherit}.stat{display:flex;gap:8px}.stat>div{flex:1;background:#fff;border-radius:12px;padding:12px}.small{font-size:12px;color:#666}.big{font-size:20px;font-weight:800}.history{background:#fff;border-radius:12px;padding:12px;margin-bottom:8px}.history b{font-size:14px}.timer-value{font-size:30px;font-variant-numeric:tabular-nums;margin:4px 0 10px}.timer-actions{display:flex;gap:8px}.timer-actions button{flex:1;border:0;border-radius:10px;padding:12px;font-weight:800}.timer-actions button:disabled{opacity:.45}.actions{margin:24px 0 30px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px #0001}.actions-title{font-weight:800;margin-bottom:10px}.actions-row{display:flex;gap:8px}.actions button{flex:1;border:0;border-radius:12px;padding:14px;font-weight:800}.save{background:#111;color:#fff}.secondary{background:#eee}
+</style>
+</head>
 <body>
 <div class="top"><h1>🏋️ Gym Tracker</h1><div class="tabs"><button class="tab active" data-day="A">A</button><button class="tab" data-day="B">B</button><button class="tab" data-day="C">C</button></div></div>
-<div class="wrap"><div class="stat"><div><div class="small">Allenamento</div><div class="big" id="dayTitle">A</div></div><div><div class="small">Ultimo</div><div class="big" id="lastDate">—</div></div></div><div id="exercises"></div><div class="section-title">Note</div><textarea id="notes" class="note" placeholder="Come è andato l'allenamento?"></textarea><div class="section-title">Storico</div><div id="history"></div></div><div class="actions"><div class="actions-title">Fine allenamento</div><div class="actions-row"><button class="secondary" id="reset">Svuota</button><button class="save" id="save">Salva allenamento</button></div></div></div>
+
+<div class="wrap">
+  <div class="stat">
+    <div><div class="small">Allenamento</div><div class="big" id="dayTitle">A</div></div>
+    <div><div class="small">Ultimo</div><div class="big" id="lastDate">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="small">Durata allenamento</div>
+    <div class="timer-value" id="timer">00:00:00</div>
+    <div class="timer-actions">
+      <button class="secondary" id="startWorkout">▶ Inizia allenamento</button>
+      <button class="secondary" id="stopWorkout" disabled>■ Termina</button>
+    </div>
+  </div>
+
+  <div id="exercises"></div>
+  <div class="section-title">Note</div>
+  <textarea id="notes" class="note" placeholder="Come è andato l'allenamento?"></textarea>
+  <div class="section-title">Storico</div>
+  <div id="history"></div>
+
+  <div class="actions">
+    <div class="actions-title">Fine allenamento</div>
+    <div class="actions-row">
+      <button class="secondary" id="reset">Svuota</button>
+      <button class="save" id="save">Salva allenamento</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const workouts={
  A:[['Chest Press',30,3,10,12],['Croci panca (manubri)',6,3,10,12],['Squat',0,3,10,12],['Shoulder Press (manubri)',6,3,8,10],['Rematore manubrio',12,3,10,12],['Tricipiti cavo',15,3,10,12],['Addominali',0,3,10,15]],
  B:[['Lat Machine',45,4,8,12],['Chest Press',30,4,8,12],['Shoulder Press (manubri)',8,4,8,12],['Leg Curl',30,4,10,12],['Curl manubri',10,3,8,12],['Iperestensioni',0,3,10,15]],
  C:[['Chest Press',30,3,10,12],['Lat Machine',45,3,8,12],['Croci panca (manubri)',6,3,10,12],['Leg Curl',30,3,10,12],['Rematore manubrio',12,3,10,12],['Tricipiti cavo',15,3,10,12],['Addominali',0,3,10,15]]
 };
-let day='A'; const key='gymTrackerV1'; let data=JSON.parse(localStorage.getItem(key)||'{"history":[]}');
-function lastFor(name){for(const h of data.history){const e=h.exercises.find(x=>x.name===name);if(e)return e}return null}
-function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.day===day));document.getElementById('dayTitle').textContent='Allenamento '+day;let hs=data.history.filter(h=>h.day===day);document.getElementById('lastDate').textContent=hs[0]?.date||'—';let box=document.getElementById('exercises');box.innerHTML='';workouts[day].forEach((e,i)=>{let [name,weight,sets,min,max]=e,last=lastFor(name);let c=document.createElement('div');c.className='card';c.innerHTML=`<div class="name">${name}</div><div class="meta">Target: ${sets} × ${min}–${max}${weight?` · riferimento ${weight} kg`:''}</div><div class="inputs"><span class="lbl">kg</span>${[0,1,2,3].map(j=>`<input inputmode="decimal" class="rep" data-i="${i}" data-j="${j}" placeholder="${j<sets?'reps':'—'}" ${j>=sets?'disabled':''}>`).join('')}</div><div class="last">Ultimo: ${last?`${last.weight||0} kg — ${last.reps.join(' / ')}`:'nessun dato'}</div>`;box.appendChild(c)});document.getElementById('notes').value='';renderHistory();}
-function renderHistory(){let hs=data.history.filter(h=>h.day===day).slice(0,8);document.getElementById('history').innerHTML=hs.length?hs.map(h=>`<div class="history"><b>${h.date}</b> · ${h.exercises.length} esercizi<br><span class="small">${h.notes||''}</span></div>`).join(''):'<div class="small">Nessun allenamento salvato.</div>'}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{day=b.dataset.day;render()});
-document.getElementById('save').onclick=()=>{let ex=[];document.querySelectorAll('.card').forEach((c,i)=>{let name=workouts[day][i][0], vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);let weight=workouts[day][i][1];ex.push({name,weight,reps:vals.map(Number)})});data.history.unshift({day,date:new Date().toLocaleDateString('it-IT'),exercises:ex,notes:document.getElementById('notes').value});localStorage.setItem(key,JSON.stringify(data));render();alert('Allenamento salvato ✓')};
-document.getElementById('reset').onclick=()=>{if(confirm('Sei sicuro di voler svuotare i dati inseriti per questo allenamento?')){document.querySelectorAll('.rep').forEach(x=>x.value='');document.getElementById('notes').value=''}};render();
-</script></body></html>
+
+let day='A';
+const key='gymTrackerV1';
+const timerKey='gymTrackerTimerV1';
+let data=JSON.parse(localStorage.getItem(key)||'{"history":[]}');
+let timerState=JSON.parse(localStorage.getItem(timerKey)||'null');
+let completedDuration=0;
+let timerTick=null;
+
+function lastFor(name){
+  for(const h of data.history){
+    const e=h.exercises.find(x=>x.name===name);
+    if(e)return e;
+  }
+  return null;
+}
+
+function formatTime(ms){
+  let s=Math.floor(Math.max(0,ms)/1000);
+  let h=Math.floor(s/3600);
+  let m=Math.floor((s%3600)/60);
+  let sec=s%60;
+  return [h,m,sec].map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+function updateTimer(){
+  const elapsed=timerState?.startedAt ? Date.now()-timerState.startedAt : completedDuration;
+  document.getElementById('timer').textContent=formatTime(elapsed);
+  document.getElementById('startWorkout').disabled=!!timerState;
+  document.getElementById('stopWorkout').disabled=!timerState;
+}
+
+function startTimer(){
+  if(timerState)return;
+  completedDuration=0;
+  timerState={startedAt:Date.now(),day};
+  localStorage.setItem(timerKey,JSON.stringify(timerState));
+  updateTimer();
+  timerTick=setInterval(updateTimer,1000);
+}
+
+function stopTimer(){
+  if(!timerState)return completedDuration;
+  completedDuration=Math.max(0,Date.now()-timerState.startedAt);
+  timerState=null;
+  localStorage.removeItem(timerKey);
+  clearInterval(timerTick);
+  timerTick=null;
+  updateTimer();
+  return completedDuration;
+}
+
+function render(){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.day===day));
+  document.getElementById('dayTitle').textContent='Allenamento '+day;
+  let hs=data.history.filter(h=>h.day===day);
+  document.getElementById('lastDate').textContent=hs[0]?.date||'—';
+
+  let box=document.getElementById('exercises');
+  box.innerHTML='';
+  workouts[day].forEach((e,i)=>{
+    let [name,weight,sets,min,max]=e;
+    let last=lastFor(name);
+    let c=document.createElement('div');
+    c.className='card';
+    c.innerHTML='<div class="name">'+name+'</div><div class="meta">Target: '+sets+' × '+min+'–'+max+(weight?' · riferimento '+weight+' kg':'')+'</div><div class="inputs"><span class="lbl">reps</span>'+[0,1,2,3].map(j=>'<input inputmode="decimal" class="rep" data-i="'+i+'" data-j="'+j+'" placeholder="'+(j<sets?'reps':'—')+'" '+(j>=sets?'disabled':'')+'>').join('')+'</div><div class="last">Ultimo: '+(last?(last.weight||0)+' kg — '+last.reps.join(' / '):'nessun dato')+'</div>';
+    box.appendChild(c);
+  });
+
+  document.getElementById('notes').value='';
+  renderHistory();
+  updateTimer();
+}
+
+function renderHistory(){
+  let hs=data.history.filter(h=>h.day===day).slice(0,8);
+  document.getElementById('history').innerHTML=hs.length
+    ?hs.map(h=>'<div class="history"><b>'+h.date+'</b> · '+h.exercises.length+' esercizi'+(h.duration?' · '+formatTime(h.duration):'')+'<br><span class="small">'+(h.notes||'')+'</span></div>').join('')
+    :'<div class="small">Nessun allenamento salvato.</div>';
+}
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  if(timerState && b.dataset.day!==day){
+    if(!confirm('Hai un allenamento in corso. Vuoi cambiare scheda? Il timer continuerà a funzionare.'))return;
+  }
+  day=b.dataset.day;
+  render();
+});
+
+document.getElementById('startWorkout').onclick=startTimer;
+document.getElementById('stopWorkout').onclick=stopTimer;
+
+document.getElementById('save').onclick=()=>{
+  let ex=[];
+  document.querySelectorAll('.card').forEach((c,i)=>{
+    if(!workouts[day][i])return;
+    let name=workouts[day][i][0];
+    let vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);
+    let weight=workouts[day][i][1];
+    ex.push({name,weight,reps:vals.map(Number)});
+  });
+
+  let duration=timerState?stopTimer():completedDuration;
+  data.history.unshift({
+    day,
+    date:new Date().toLocaleDateString('it-IT'),
+    duration,
+    exercises:ex,
+    notes:document.getElementById('notes').value
+  });
+  localStorage.setItem(key,JSON.stringify(data));
+  completedDuration=0;
+  render();
+  alert('Allenamento salvato ✓');
+};
+
+document.getElementById('reset').onclick=()=>{
+  if(confirm('Sei sicuro di voler svuotare tutti i dati inseriti per questo allenamento?')){
+    document.querySelectorAll('.rep').forEach(x=>x.value='');
+    document.getElementById('notes').value='';
+  }
+};
+
+render();
+if(timerState)timerTick=setInterval(updateTimer,1000);
+</script>
+</body>
+</html>
