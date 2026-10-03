@@ -14,7 +14,7 @@
 <p class="hint">Inserisci il peso usato e le reps di ogni serie. La riga “Partenza” contiene i tuoi dati attuali.</p>
 <div id="exercises"></div>
 <div class="section-title">Note</div><textarea id="notes" class="note" placeholder="Come è andato l'allenamento?"></textarea>
-<div class="section-title">Storico</div><div id="history"></div>
+<div class="section-title">Dati</div><div class="card"><div class="meta">Backup completo dello storico. Salvalo prima di cambiare telefono.</div><div style="display:flex;gap:8px"><button class="secondary" id="export">⬇️ Esporta dati</button><button class="secondary" id="import">⬆️ Importa dati</button></div><input id="fileImport" type="file" accept=".json,application/json" style="display:none"></div><div class="section-title">Storico</div><div id="history"></div>
 </div>
 <div class="footer"><button class="secondary" id="reset">Svuota</button><button class="save" id="save">Salva allenamento</button></div>
 <script>
@@ -72,6 +72,21 @@ document.getElementById('save').onclick=()=>{
  const duration=workoutStart?endWorkout():null;const ex=[];
  document.querySelectorAll('.card').forEach((c,i)=>{const [name]=workouts[day][i];const vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);const weight=parseFloat(c.querySelector('.weight').value)||0;ex.push({name,weight,reps:vals.map(Number)})});
  data.history.unshift({day,date:new Date().toLocaleDateString('it-IT'),duration,exercises:ex,notes:document.getElementById('notes').value});localStorage.setItem(key,JSON.stringify(data));render();alert('Allenamento salvato ✓')
+};
+document.getElementById('export').onclick=()=>{
+ const payload={version:1,exportedAt:new Date().toISOString(),history:data.history};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='gym-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+};
+document.getElementById('import').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{const imported=JSON.parse(await file.text());const history=Array.isArray(imported)?imported:imported.history;
+   if(!Array.isArray(history))throw new Error('Formato non valido');
+   if(!confirm('Importando il backup verrà sostituito lo storico attuale. Continuare?'))return;
+   data={history};localStorage.setItem(key,JSON.stringify(data));render();alert('Backup importato ✓');
+ }catch(err){alert('Backup non valido o illeggibile.')}
+ e.target.value='';
 };
 document.getElementById('reset').onclick=()=>{document.querySelectorAll('.rep').forEach(x=>x.value='');document.getElementById('notes').value=''};render();
 </script>
