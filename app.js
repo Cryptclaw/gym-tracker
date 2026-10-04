@@ -53,7 +53,7 @@ function renderHistory(){const hs=data.history.filter(h=>h.day===day).slice(0,20
 function saveWorkout(){
  if(historyBroken){status('Prima recupera o esporta lo storico non leggibile.');return;}
  let exercises;try{exercises=[...document.querySelectorAll('#exercises .card')].map((c,i)=>({name:workouts[day][i][0],weight:Number(c.querySelector('.weight').value),reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()===''?null:Number(x.value))}));
- if(!exercises.some(e=>e.reps.some(r=>r!==null)))throw Error('Inserisci almeno una serie prima di salvare.');
+ exercises=exercises.filter(e=>e.reps.some(r=>r!==null));if(!exercises.length)throw Error('Inserisci almeno una serie prima di salvare.');
  const h=GymCore.validateWorkout({id:crypto.randomUUID(),createdAt:new Date().toISOString(),day,date:new Date().toLocaleDateString('it-IT'),duration:workoutStart?Date.now()-workoutStart:lastDuration,exercises,notes:$('notes').value});
  const current=JSON.parse(localStorage.getItem(key)||'{"history":[]}').history.map(GymCore.validateWorkout);const next={history:GymCore.mergeHistory([h,...data.history],current)};if(!write(key,next))return;data=next;
  }catch(err){status(err.message);return;}
