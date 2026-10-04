@@ -5,6 +5,8 @@ Direct-access workout tracker at https://cryptclaw.github.io/gym-tracker/.
 ## Saving and recovery
 
 - Drafts are saved on every input and survive changing workout days and reloading.
+- Each exercise has a recovery countdown (default 90 seconds, adjustable in 30-second steps from 30 seconds to 15 minutes), start/pause and reset. Deadlines and paused time survive reload and day changes. Completion produces a short sound when browser audio is available; closed/suspended mobile browsers cannot guarantee an audible alarm.
+- Each exercise has a completion checkbox and each day shows completed/total exercises. Checkboxes stay in the local draft and reset when that workout is saved or its draft is cleared.
 - Finished workouts are stored locally first. Failed cloud requests never delete local data; sync retries on reconnect and every minute.
 - Cloud storage uses a random 256-bit recovery key, generated on the device. There is no login. Treat the code and JSON backup as private credentials. A public URL alone cannot recover a private history.
 - The Edge Function hashes the recovery key and restricts every query to that hash. Database tables have RLS and no anonymous or authenticated access. The browser has no database admin key.
