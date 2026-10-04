@@ -5,8 +5,16 @@ const server=http.createServer((req,res)=>{const name=req.url.split('?')[0];if(n
  try{
  const context=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844}}),page=await context.newPage(),errors=[];page.on('pageerror',err=>errors.push(err.message));const vaults=new Map();let failCloud=false;
  await context.route('**/mock-cloud',async route=>{if(failCloud)return route.fulfill({status:503,body:'{}'});const req=route.request(),secret=req.headers()['x-gym-key'],body=req.postDataJSON();if(body.register&&!vaults.has(secret))vaults.set(secret,new Map());const vault=vaults.get(secret);if(body.workouts&&vault){for(const h of body.workouts)if(!vault.has(h.id))vault.set(h.id,h);}await route.fulfill({contentType:'application/json',body:JSON.stringify({exists:!!vault,saved:true,workouts:vault?[...vault.values()]:[],hasMore:false})});});
- await page.goto(url);await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));
+ await page.clock.install();await page.goto(url);await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));
  assert.equal(await page.locator('#exercises .card').count(),6);assert.equal(await page.getByRole('spinbutton',{name:'Peso Chest Press',exact:true}).inputValue(),'35');
+ const chest=page.getByRole('group',{name:'Recupero Chest Press',exact:true});
+ await chest.getByRole('button',{name:'Aumenta recupero Chest Press di 30 secondi',exact:true}).click();assert.equal(await chest.locator('.rest-setting').innerText(),'120 s');
+ await page.getByRole('checkbox',{name:'Chest Press completato',exact:true}).check();assert.match(await page.locator('#dayProgress').innerText(),/1 \/ 6/);
+ await chest.getByRole('button',{name:'Avvia',exact:true}).click();await page.clock.fastForward(31000);await page.reload();await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));assert.equal(await chest.getByRole('button',{name:'Pausa',exact:true}).count(),1);assert.match(await chest.locator('.rest-countdown').innerText(),/^01:/);await chest.getByRole('button',{name:'Pausa',exact:true}).click();const paused=await chest.locator('.rest-countdown').innerText();await page.clock.fastForward(31000);assert.equal(await chest.locator('.rest-countdown').innerText(),paused);
+ await page.getByRole('button',{name:'B',exact:true}).click();assert.match(await page.locator('#dayProgress').innerText(),/0 \/ 6/);await page.getByRole('button',{name:'A',exact:true}).click();assert.equal(await page.getByRole('checkbox',{name:'Chest Press completato',exact:true}).isChecked(),true);
+ await page.reload();await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));assert.equal(await page.getByRole('checkbox',{name:'Chest Press completato',exact:true}).isChecked(),true);assert.equal(await chest.locator('.rest-countdown').innerText(),paused);
+ await chest.getByRole('button',{name:'Avvia',exact:true}).click();await page.clock.fastForward(121000);assert.equal(await chest.locator('.rest-countdown').innerText(),'Recupero terminato ✓');assert.equal(await page.getByRole('group',{name:'Recupero Rematore con manubri',exact:true}).locator('.rest-countdown').innerText(),'01:30');
+ await chest.getByRole('button',{name:'Reset',exact:true}).click();assert.equal(await chest.locator('.rest-countdown').innerText(),'02:00');
  await page.getByRole('spinbutton',{name:'Chest Press serie 1',exact:true}).fill('12');await page.getByRole('spinbutton',{name:'Chest Press serie 3',exact:true}).fill('12');await page.getByRole('textbox').fill('<img src=x onerror=alert(1)>');
  await page.getByRole('button',{name:'B',exact:true}).click();await page.getByRole('button',{name:'A',exact:true}).click();assert.equal(await page.getByRole('spinbutton',{name:'Chest Press serie 1',exact:true}).inputValue(),'12');
  await page.reload();await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));assert.equal(await page.getByRole('spinbutton',{name:'Chest Press serie 3',exact:true}).inputValue(),'12');
@@ -20,7 +28,7 @@ const server=http.createServer((req,res)=>{const name=req.url.split('?')[0];if(n
  await page.getByRole('button',{name:'A',exact:true}).click();await page.getByRole('spinbutton',{name:'Chest Press serie 1',exact:true}).fill('12');await page.getByRole('spinbutton',{name:'Chest Press serie 2',exact:true}).fill('12');await page.getByRole('spinbutton',{name:'Chest Press serie 3',exact:true}).fill('12');await page.getByRole('button',{name:'Salva allenamento',exact:true}).click();await page.waitForFunction(()=>document.getElementById('cloudStatus').textContent.includes('sincronizzato'));assert.match(await page.locator('.suggestion').first().innerText(),/37.5/);
  await page.screenshot({path:path.join(root,'preview.png'),fullPage:false});
  assert.deepEqual(errors,[]);await context.close();
- console.log('PASS browser: days A/B/C, draft across reload, offline save, retry sync, export and safe notes');
+ console.log('PASS browser: exercise timer, pause, expiry, completion persistence, days A/B/C, offline save, cloud retry and export');
  }finally{await browser.close();server.close();}
 })().catch(error=>{console.error(error);server.close();process.exitCode=1;});
 

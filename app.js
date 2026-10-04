@@ -29,13 +29,35 @@ const workouts={
 const key='gymTrackerV1',draftKey='gymDraftsV2',cloudKey='gymCloudKeyV1';
 let day='A',data={history:[]},drafts={},workoutStart=null,timerId=null,lastDuration=null,cloudSecret=null,syncBusy=false,syncAgain=false,historyBroken=false;
 const $=id=>document.getElementById(id),esc=GymCore.escapeHtml;
+let restAudio=null;
+function restState(i){const d=drafts[day]??=( {exercises:[],notes:''} );return d.exercises[i]??=( {} );}
+function restRemaining(state){return state.restEndsAt?Math.max(0,state.restEndsAt-Date.now()):state.restRemainingMs??(state.restSeconds||90)*1000;}
+function persistDrafts(){return write(draftKey,{day,drafts,workoutStart,lastDuration});}
+function prepareRestSound(){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){restAudio??=new Audio();restAudio.resume().catch(()=>{});}}catch{}}
+function restSound(){try{if(!restAudio||restAudio.state!=='running')return;const oscillator=restAudio.createOscillator(),gain=restAudio.createGain();oscillator.connect(gain);gain.connect(restAudio.destination);oscillator.frequency.value=880;gain.gain.setValueAtTime(.15,restAudio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,restAudio.currentTime+.4);oscillator.start();oscillator.stop(restAudio.currentTime+.4);}catch{}}
+function updateExerciseStatus(){
+ let finished=false;
+ Object.values(drafts).forEach(d=>d.exercises?.forEach(state=>{if(state?.restEndsAt&&state.restEndsAt<=Date.now()){state.restEndsAt=null;state.restRemainingMs=0;state.restFinished=true;finished=true;}}));
+ document.querySelectorAll('#exercises .card').forEach((card,i)=>{const state=restState(i);if(state.restEndsAt&&state.restEndsAt<=Date.now()){state.restEndsAt=null;state.restRemainingMs=0;state.restFinished=true;finished=true;}
+ const seconds=Math.ceil(restRemaining(state)/1000);card.querySelector('.rest-countdown').textContent=state.restFinished?'Recupero terminato ✓':String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+ card.querySelector('.rest-setting').textContent=(state.restSeconds||90)+' s';card.querySelector('[data-rest="toggle"]').textContent=state.restEndsAt?'Pausa':'Avvia';card.classList.toggle('completed',!!state.completed);
+ });
+ $('dayProgress').textContent=workouts[day].filter((e,i)=>drafts[day]?.exercises?.[i]?.completed).length+' / '+workouts[day].length+' esercizi completati';
+ if(finished){persistDrafts();restSound();status('Recupero terminato');}
+}
+function handleRestClick(event){const button=event.target.closest('[data-rest]');if(!button)return;const i=Number(button.closest('.card').dataset.exercise);saveDraft();const state=restState(i),action=button.dataset.rest;
+ if(action==='toggle'){prepareRestSound();if(state.restEndsAt){state.restRemainingMs=restRemaining(state);state.restEndsAt=null;}else{state.restEndsAt=Date.now()+(restRemaining(state)|| (state.restSeconds||90)*1000);state.restFinished=false;}}
+ if(action==='reset'){state.restEndsAt=null;state.restRemainingMs=(state.restSeconds||90)*1000;state.restFinished=false;}
+ if(action==='minus'||action==='plus'){const old=state.restSeconds||90,next=Math.max(30,Math.min(900,old+(action==='plus'?30:-30)));state.restSeconds=next;if(state.restEndsAt){state.restEndsAt+= (next-old)*1000;}else{state.restRemainingMs=next*1000;state.restFinished=false;}}
+ persistDrafts();updateExerciseStatus();
+}
 function status(text){$('saveStatus').textContent=text;}
 function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{status('Salvataggio sul dispositivo non riuscito. Esporta i dati prima di chiudere.');return false;}}
 function formatDuration(ms){const s=Math.max(0,Math.floor(ms/1000));return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(v=>String(v).padStart(2,'0')).join(':');}
 function updateTimer(){$('timer').textContent=formatDuration(workoutStart?Date.now()-workoutStart:lastDuration||0);}
 function setWorkoutButton(){$('startWorkout').textContent=workoutStart?'■ Termina allenamento':'▶ Inizia allenamento';}
 function saveDraft(){
- drafts[day]={exercises:[...document.querySelectorAll('#exercises .card')].map(c=>({weight:c.querySelector('.weight').value,reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value)})),notes:$('notes').value};
+ drafts[day]={exercises:[...document.querySelectorAll('#exercises .card')].map((c,i)=>({...drafts[day]?.exercises?.[i],completed:c.querySelector('.exercise-complete').checked,weight:c.querySelector('.weight').value,reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value)})),notes:$('notes').value};
  if(write(draftKey,{day,drafts,workoutStart,lastDuration}))status('Bozza salvata sul dispositivo');
 }
 function startWorkout(){workoutStart=Date.now();lastDuration=null;saveDraft();clearInterval(timerId);timerId=setInterval(updateTimer,1000);updateTimer();setWorkoutButton();}
@@ -46,8 +68,10 @@ function render(){
  $('lastDate').textContent=data.history.find(h=>h.day===day)?.date||'—';$('exercises').innerHTML='';
  workouts[day].forEach((e,i)=>{const [name,initial,sets,min,max,startReps]=e,last=lastFor(name),draft=drafts[day]?.exercises?.[i],weight=draft?.weight??last?.weight??initial;const c=document.createElement('div');c.className='card';
  c.innerHTML=`<div class="name">${esc(name)}</div><div class="meta">Target: ${sets} × ${min}–${max}${initial?' · peso iniziale '+initial+' kg':''}</div><div class="weight-row"><label for="weight-${i}">Peso usato</label><input id="weight-${i}" aria-label="Peso ${esc(name)}" class="weight" inputmode="decimal" type="number" min="0" max="2000" step="0.5" value="${esc(weight)}"> kg</div><div class="inputs"><span class="lbl">Reps</span>${[0,1,2,3].map(j=>`<input aria-label="${esc(name)} serie ${j+1}" inputmode="numeric" type="number" min="0" max="1000" step="1" class="rep" value="${esc(draft?.reps?.[j]??'')}" placeholder="${j<sets?'reps':'—'}" ${j>=sets?'disabled':''}>`).join('')}</div><div class="startpoint">Partenza: ${initial?initial+' kg':'corpo libero'}${startReps.length?' — '+startReps.join(' / '):''}</div><div class="last">Ultimo allenamento: ${last?esc(last.weight+' kg — '+last.reps.map(r=>r??'—').join(' / ')):'nessun dato'}</div>${(()=>{const s=GymCore.suggestion(last,sets,min,max,last?.weight??initial);return `<div class="suggestion ${s.neutral?'neutral':''}">💡 ${esc(s.text)}</div>`;})()}`;
+ c.dataset.exercise=i;
+ c.insertAdjacentHTML('beforeend',`<div class="rest-controls" role="group" aria-label="Recupero ${esc(name)}"><div class="rest-title">Recupero · <span class="rest-setting"></span></div><div class="rest-buttons"><button type="button" data-rest="minus" aria-label="Riduci recupero ${esc(name)} di 30 secondi">−30 s</button><output class="rest-countdown" aria-label="Timer ${esc(name)}"></output><button type="button" data-rest="plus" aria-label="Aumenta recupero ${esc(name)} di 30 secondi">+30 s</button><button type="button" data-rest="toggle">Avvia</button><button type="button" data-rest="reset">Reset</button></div></div><label class="complete-label"><input type="checkbox" class="exercise-complete" aria-label="${esc(name)} completato" ${draft?.completed?'checked':''}> Esercizio completato</label>`);
  $('exercises').appendChild(c);
- });$('notes').value=drafts[day]?.notes||'';renderHistory();updateTimer();setWorkoutButton();
+ });$('notes').value=drafts[day]?.notes||'';renderHistory();updateTimer();setWorkoutButton();updateExerciseStatus();
 }
 function renderHistory(){const hs=data.history.filter(h=>h.day===day).slice(0,20);$('history').innerHTML=hs.length?hs.map(h=>`<div class="history"><b>${esc(h.date)}</b> · ${h.exercises.filter(e=>e.reps.some(r=>r!==null)).length} esercizi${h.duration?' · '+formatDuration(h.duration):''}<br><span class="small">${esc(h.notes)}</span></div>`).join(''):'<div class="small">Nessun allenamento salvato.</div>';}
 function saveWorkout(){
@@ -93,14 +117,14 @@ async function initialize(){
  try{cloudSecret=localStorage.getItem(cloudKey);if(!/^[a-f0-9]{64}$/.test(cloudSecret||'')){cloudSecret=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(cloudKey,cloudSecret);}}
  catch{cloudSecret=null;$('cloudStatus').textContent='Salvataggio cloud non disponibile: memoria del browser bloccata.';}
  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{saveDraft();day=b.dataset.day;render();write(draftKey,{day,drafts,workoutStart,lastDuration});});
- $('exercises').addEventListener('input',saveDraft);$('notes').addEventListener('input',saveDraft);
+ $('exercises').addEventListener('input',()=>{saveDraft();updateExerciseStatus();});$('notes').addEventListener('input',saveDraft);$('exercises').addEventListener('click',handleRestClick);
  $('startWorkout').onclick=()=>workoutStart?endWorkout():startWorkout();$('save').onclick=saveWorkout;$('export').onclick=downloadBackup;$('import').onclick=()=>$('fileImport').click();$('fileImport').onchange=importBackup;
  $('reset').onclick=()=>{if(!confirm('Svuotare solo la bozza di questo giorno? Gli allenamenti salvati restano nello storico.'))return;delete drafts[day];write(draftKey,{day,drafts,workoutStart,lastDuration});render();status('Bozza svuotata');};
  $('sync').onclick=syncCloud;$('recovery').onclick=()=>{const code=prompt('Conserva questo codice in un posto privato. Su un altro dispositivo usa “Ripristina cloud”. Chi lo possiede può leggere lo storico.',cloudSecret);};
  $('restoreCloud').onclick=async()=>{const code=prompt('Inserisci il codice di recupero del tuo tracker');if(!code)return;if(!/^[a-f0-9]{64}$/.test(code.trim())){status('Codice non valido');return;}if(!confirm('Collegare questo dispositivo al tracker del codice? Lo storico locale verrà aggiunto senza cancellazioni.'))return;if(syncBusy){status('Attendi il completamento della sincronizzazione');return;}const previous=cloudSecret;try{cloudSecret=code.trim();const check=await cloudRequest({offset:0});if(!check.exists){cloudSecret=previous;status('Codice non trovato: controlla il codice e la connessione');return;}localStorage.setItem(cloudKey,cloudSecret);await syncCloud();}catch{cloudSecret=previous;status('Recupero non riuscito: controlla la connessione');}};
  window.addEventListener('online',syncCloud);window.addEventListener('offline',()=>{$('cloudStatus').textContent='Offline · dati salvati sul dispositivo';});
  window.addEventListener('storage',event=>{if(event.key===key){try{data={history:GymCore.mergeHistory(data.history,JSON.parse(event.newValue||'{"history":[]}').history)};renderHistory();}catch{}}});
- render();if(workoutStart)timerId=setInterval(updateTimer,1000);if(cloudSecret)syncCloud();setInterval(syncCloud,60000);
+ render();setInterval(updateExerciseStatus,500);if(workoutStart)timerId=setInterval(updateTimer,1000);if(cloudSecret)syncCloud();setInterval(syncCloud,60000);
  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 initialize().catch(()=>status('Avvio non riuscito. Esporta i dati e ricarica la pagina.'));
