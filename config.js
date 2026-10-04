@@ -1,2 +1,2 @@
 // Only a public function URL belongs here. Never put database secrets in the browser.
-const GYM_CONFIG = Object.freeze({endpoint:''});
+const GYM_CONFIG = Object.freeze({endpoint:'https://qulgmwjzzmnlnlbnstcm.supabase.co/functions/v1/gym-sync'});

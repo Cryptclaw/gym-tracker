@@ -21,6 +21,10 @@ The Pages workflow publishes only after syntax, data and browser tests pass. The
 
 ## Database deployment
 
+The dedicated `gym-tracker` project is in Cryptclaw's Org on its Free plan (quoted recurring project cost: 0/month). Live write/read, duplicate retry, cross-vault isolation and input rejection checks passed. The original finance project is unchanged.
+
+The security advisor reports two informational `rls_enabled_no_policy` notices. This is intentional: browser roles have no table privileges or policies, so access is denied. Only the capability-checking Edge Function can read/insert. SQL verification confirms RLS on both tables, no `anon`/`authenticated` SELECT privileges, and no service-role UPDATE/DELETE privileges. See https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy .
+
 Apply `database/schema.sql` to a dedicated Supabase project. Deploy `database/function.ts` with `core.js` at the relative import path, as function `gym-sync`, with platform JWT verification disabled: authentication is the 256-bit capability in `X-Gym-Key`, checked by the function. Only the SHA-256 hash is stored in the database. Configure its public URL in `config.js`.
 
 The service-role credential exists only in the Edge Function environment. No read, edit or delete endpoint without the matching recovery key is exposed. This is capability-based authentication, not a public shared database.
