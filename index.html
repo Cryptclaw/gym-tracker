@@ -12,83 +12,11 @@
 <div class="wrap">
 <div class="stat"><div><div class="small">Allenamento</div><div class="big" id="dayTitle">A</div></div><div><div class="small">Ultimo</div><div class="big" id="lastDate">—</div></div></div>
 <p class="hint">Inserisci il peso usato e le reps di ogni serie. La riga “Partenza” contiene i tuoi dati attuali.</p>
-<div id="exercises"></div>
+<div id="saveStatus" class="hint" role="status" aria-live="polite">Salvataggio automatico della bozza</div><div id="exercises"></div>
 <div class="section-title">Note</div><textarea id="notes" class="note" placeholder="Come è andato l'allenamento?"></textarea>
-<div class="section-title">Dati</div><div class="card"><div class="meta">Backup completo dello storico. Salvalo prima di cambiare telefono.</div><div style="display:flex;gap:8px"><button class="secondary" id="export">⬇️ Esporta dati</button><button class="secondary" id="import">⬆️ Importa dati</button></div><input id="fileImport" type="file" accept=".json,application/json" style="display:none"></div><div class="section-title">Storico</div><div id="history"></div>
+<div class="section-title">Salvataggio</div><div class="card"><div id="cloudStatus" role="status" aria-live="polite">Connessione al cloud…</div><p class="small">Accesso diretto, senza login. Conserva il codice di recupero o un backup per ritrovare i dati su un altro dispositivo. La bozza viene salvata sul telefono; lo storico anche sul cloud.</p><button id="sync" class="secondary">Sincronizza</button> <button id="recovery" class="secondary">Codice di recupero</button> <button id="restoreCloud" class="secondary">Ripristina cloud</button></div><div class="section-title">Dati</div><div class="card"><div class="meta">Backup dello storico e codice di recupero. Conserva questo file in un posto privato.</div><div style="display:flex;gap:8px"><button class="secondary" id="export">⬇️ Esporta dati</button><button class="secondary" id="import">⬆️ Importa dati</button></div><input id="fileImport" type="file" accept=".json,application/json" style="display:none"></div><div class="section-title">Storico</div><div id="history"></div>
 </div>
-<div class="footer"><button class="secondary" id="reset">Svuota</button><button class="save" id="save">Salva allenamento</button></div>
-<script>
-const workouts={
- A:[
-  ['Chest Press',35,3,8,12,[]],
-  ['Croci con manubri su panca',6,3,10,15,[15,15,12]],
-  ['Rematore con manubri',14,3,8,12,[8,8,8]],
-  ['Shoulder Press con manubri',10,3,8,12,[]],
-  ['Tricipiti al cavo',17.5,3,10,15,[]],
-  ['Addominali',0,3,10,15,[]]
- ],
- B:[
-  ['Lat Machine',50,3,8,12,[8,8,8]],
-  ['Chest Press',35,3,8,12,[9,9,9]],
-  ['Leg Curl',35,3,10,15,[12,12,12]],
-  ['Back Extension / Iperestensioni',0,3,8,12,[]],
-  ['Bicipiti con manubri',10,3,8,12,[8,8,6]],
-  ['Squat a corpo libero',0,2,10,15,[]]
- ],
- C:[
-  ['Lat Machine',50,3,8,12,[8,8,8]],
-  ['Chest Press',30,3,8,12,[]],
-  ['Shoulder Press con manubri',8,3,8,12,[]],
-  ['Leg Extension',0,2,10,15,[]],
-  ['Rematore con manubri',12,3,8,12,[]],
-  ['Tricipiti al cavo',15,2,10,15,[]],
-  ['Bicipiti con manubri',10,2,8,12,[]],
-  ['Addominali',0,2,10,15,[]]
- ]
-};
-const key='gymTrackerV1';let day='A';let data=JSON.parse(localStorage.getItem(key)||'{"history":[]}');let workoutStart=null,timerId=null;
-function formatDuration(ms){const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return [h,m,sec].map(v=>String(v).padStart(2,'0')).join(':')}
-function updateTimer(){document.getElementById('timer').textContent=formatDuration(workoutStart?Date.now()-workoutStart:0)}
-function setWorkoutButton(){document.getElementById('startWorkout').textContent=workoutStart?'■ Termina allenamento':'▶ Inizia allenamento'}
-function startWorkout(){workoutStart=Date.now();localStorage.setItem('gymWorkoutStart',String(workoutStart));updateTimer();setWorkoutButton();clearInterval(timerId);timerId=setInterval(updateTimer,1000)}
-function endWorkout(){if(!workoutStart)return null;const d=Date.now()-workoutStart;workoutStart=null;localStorage.removeItem('gymWorkoutStart');clearInterval(timerId);timerId=null;updateTimer();setWorkoutButton();return d}
-const savedStart=Number(localStorage.getItem('gymWorkoutStart'));if(savedStart){workoutStart=savedStart;timerId=setInterval(updateTimer,1000)}
-function lastFor(name){for(const h of data.history){if(h.day!==day)continue;const e=h.exercises.find(x=>x.name===name);if(e)return e}return null}
-function nextSuggestion(last,min,max,weight){if(!last||!last.reps||!last.reps.length)return {text:'Prima volta: usa il peso di partenza e resta nel range indicato.',neutral:true};const reps=last.reps;const complete=reps.length>0&&reps.every(Number.isFinite);if(!complete||reps.length<last.expectedSets)return {text:'Completa tutte le serie: poi possiamo valutare l’aumento.',neutral:true};const allTop=reps.every(r=>r>=max);if(weight<=0)return allTop?{text:'Hai raggiunto il limite alto. Per ora resta a corpo libero e valuta un piccolo sovraccarico.',neutral:false}:{text:'Mantieni il carico e prova ad aggiungere 1 ripetizione totale rispetto all’ultima volta.',neutral:true};if(allTop){const inc=(weight>=15?2.5:2);const next=Math.round((weight+inc)*10)/10;return {text:'Prossima volta: prova '+next+' kg. È la progressione prevista.',neutral:false}}return {text:'Mantieni '+weight+' kg e prova ad aggiungere 1–2 ripetizioni totali rispetto all’ultima volta.',neutral:true}
-}
-function render(){
- document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.day===day));document.getElementById('dayTitle').textContent='Allenamento '+day;
- const hs=data.history.filter(h=>h.day===day);document.getElementById('lastDate').textContent=hs[0]?.date||'—';
- const box=document.getElementById('exercises');box.innerHTML='';
- workouts[day].forEach((e,i)=>{const [name,weight,sets,min,max,startReps]=e,last=lastFor(name); if(last) last.expectedSets=sets;const c=document.createElement('div');c.className='card';
-  c.innerHTML=`<div class="name">${name}</div><div class="meta">Target: ${sets} × ${min}–${max}${weight?' · peso iniziale '+weight+' kg':''}</div><div class="weight-row"><label>Peso usato</label><input class="weight" inputmode="decimal" type="number" step="0.5" value="${weight||0}"> kg</div><div class="inputs"><span class="lbl">Reps</span>${[0,1,2,3].map(j=>`<input inputmode="numeric" type="number" class="rep" data-i="${i}" data-j="${j}" placeholder="${j<sets?'reps':'—'}" ${j>=sets?'disabled':''}>`).join('')}</div><div class="startpoint">Partenza: ${weight?weight+' kg':'corpo libero'}${startReps.length?' — '+startReps.join(' / '):''}</div><div class="last">Ultimo allenamento: ${last?`${last.weight||0} kg — ${last.reps.join(' / ')}`:'nessun dato'}</div>${(()=>{const s=nextSuggestion(last,min,max,last?.weight??weight);return `<div class="suggestion ${s.neutral?'neutral':''}">💡 ${s.text}</div>`})()}`;
-  box.appendChild(c);
- });
- document.getElementById('notes').value='';renderHistory();updateTimer();setWorkoutButton();
-}
-function renderHistory(){const hs=data.history.filter(h=>h.day===day).slice(0,8);document.getElementById('history').innerHTML=hs.length?hs.map(h=>`<div class="history"><b>${h.date}</b> · ${h.exercises.length} esercizi${h.duration?' · '+formatDuration(h.duration):''}<br><span class="small">${h.notes||''}</span></div>`).join(''):'<div class="small">Nessun allenamento salvato.</div>'}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{day=b.dataset.day;render()});
-document.getElementById('startWorkout').onclick=()=>workoutStart?endWorkout():startWorkout();
-document.getElementById('save').onclick=()=>{
- const duration=workoutStart?endWorkout():null;const ex=[];
- document.querySelectorAll('#exercises .card').forEach((c,i)=>{const [name]=workouts[day][i];const vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);const weight=parseFloat(c.querySelector('.weight').value)||0;ex.push({name,weight,reps:vals.map(Number)})});
- data.history.unshift({day,date:new Date().toLocaleDateString('it-IT'),duration,exercises:ex,notes:document.getElementById('notes').value});localStorage.setItem(key,JSON.stringify(data));render();alert('Allenamento salvato ✓')
-};
-document.getElementById('export').onclick=()=>{
- const payload={version:1,exportedAt:new Date().toISOString(),history:data.history};
- const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
- const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='gym-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-};
-document.getElementById('import').onclick=()=>document.getElementById('fileImport').click();
-document.getElementById('fileImport').onchange=async e=>{
- const file=e.target.files[0];if(!file)return;
- try{const imported=JSON.parse(await file.text());const history=Array.isArray(imported)?imported:imported.history;
-   if(!Array.isArray(history))throw new Error('Formato non valido');
-   if(!confirm('Importando il backup verrà sostituito lo storico attuale. Continuare?'))return;
-   data={history};localStorage.setItem(key,JSON.stringify(data));render();alert('Backup importato ✓');
- }catch(err){alert('Backup non valido o illeggibile.')}
- e.target.value='';
-};
-document.getElementById('reset').onclick=()=>{document.querySelectorAll('.rep').forEach(x=>x.value='');document.getElementById('notes').value=''};render();
-</script>
+<div class="footer"><button class="secondary" id="reset">Svuota bozza</button><button class="save" id="save">Salva allenamento</button></div>
+<script src="./config.js"></script><script src="./core.js"></script><script src="./app.js"></script>
 </body></html>
+
