@@ -55,6 +55,7 @@ function endWorkout(){if(!workoutStart)return null;const d=Date.now()-workoutSta
 const savedStart=Number(localStorage.getItem('gymWorkoutStart'));if(savedStart){workoutStart=savedStart;timerId=setInterval(updateTimer,1000)}
 function lastFor(name){for(const h of data.history){if(h.day!==day)continue;const e=h.exercises.find(x=>x.name===name);if(e)return e}return null}
 function nextSuggestion(last,min,max,weight){if(!last||!last.reps||!last.reps.length)return {text:'Prima volta: usa il peso di partenza e resta nel range indicato.',neutral:true};const reps=last.reps;const complete=reps.length>0&&reps.every(Number.isFinite);if(!complete||reps.length<last.expectedSets)return {text:'Completa tutte le serie: poi possiamo valutare l’aumento.',neutral:true};const allTop=reps.every(r=>r>=max);if(weight<=0)return allTop?{text:'Hai raggiunto il limite alto. Per ora resta a corpo libero e valuta un piccolo sovraccarico.',neutral:false}:{text:'Mantieni il carico e prova ad aggiungere 1 ripetizione totale rispetto all’ultima volta.',neutral:true};if(allTop){const inc=(weight>=15?2.5:2);const next=Math.round((weight+inc)*10)/10;return {text:'Prossima volta: prova '+next+' kg. È la progressione prevista.',neutral:false}}return {text:'Mantieni '+weight+' kg e prova ad aggiungere 1–2 ripetizioni totali rispetto all’ultima volta.',neutral:true}
+}
 function render(){
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.day===day));document.getElementById('dayTitle').textContent='Allenamento '+day;
  const hs=data.history.filter(h=>h.day===day);document.getElementById('lastDate').textContent=hs[0]?.date||'—';
@@ -70,7 +71,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{day=b.dataset.day;re
 document.getElementById('startWorkout').onclick=()=>workoutStart?endWorkout():startWorkout();
 document.getElementById('save').onclick=()=>{
  const duration=workoutStart?endWorkout():null;const ex=[];
- document.querySelectorAll('.card').forEach((c,i)=>{const [name]=workouts[day][i];const vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);const weight=parseFloat(c.querySelector('.weight').value)||0;ex.push({name,weight,reps:vals.map(Number)})});
+ document.querySelectorAll('#exercises .card').forEach((c,i)=>{const [name]=workouts[day][i];const vals=[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()).filter(Boolean);const weight=parseFloat(c.querySelector('.weight').value)||0;ex.push({name,weight,reps:vals.map(Number)})});
  data.history.unshift({day,date:new Date().toLocaleDateString('it-IT'),duration,exercises:ex,notes:document.getElementById('notes').value});localStorage.setItem(key,JSON.stringify(data));render();alert('Allenamento salvato ✓')
 };
 document.getElementById('export').onclick=()=>{
