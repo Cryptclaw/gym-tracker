@@ -1,4 +1,4 @@
-const CACHE='gym-tracker-v2.3';
+const CACHE='gym-tracker-v2.4';
 const ASSETS=['./','./index.html','./config.js','./core.js','./app.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS.map(asset=>new Request(new URL(asset,self.registration.scope),{cache:'reload'})))));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('gym-tracker-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
