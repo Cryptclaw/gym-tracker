@@ -1,32 +1,33 @@
 const workouts={
  A:[
-  ['Chest Press',35,3,8,12,[]],
-  ['Croci con manubri su panca',6,3,10,15,[15,15,12]],
-  ['Rematore con manubri',14,3,8,12,[8,8,8]],
-  ['Shoulder Press con manubri',10,3,8,12,[]],
-  ['Tricipiti al cavo',17.5,3,10,15,[]],
-  ['Addominali',0,3,10,15,[]]
+  ["Panca inclinata con manubri",null,3,8,12,[]],
+  ["Croci con manubri su panca",6,3,10,15,[15,15,12]],
+  ["Rematore con manubri",14,3,8,12,[8,8,8]],
+  ["Shoulder Press con manubri",10,3,8,12,[]],
+  ["Tricipiti al cavo",17.5,3,10,15,[]],
+  ["Addominali",0,3,10,15,[]]
  ],
  B:[
-  ['Lat Machine',50,3,8,12,[8,8,8]],
-  ['Chest Press',35,3,8,12,[9,9,9]],
-  ['Leg Curl',35,3,10,15,[12,12,12]],
-  ['Back Extension / Iperestensioni',0,3,8,12,[]],
-  ['Bicipiti con manubri',10,3,8,12,[8,8,6]],
-  ['Squat a corpo libero',0,2,10,15,[]]
+  ["Lat Machine",50,3,8,12,[8,8,8]],
+  ["Chest Press",35,3,8,12,[9,9,9]],
+  ["Leg Curl",35,3,10,15,[12,12,12]],
+  ["Back Extension / Iperestensioni",0,3,8,12,[]],
+  ["Bicipiti con manubri",10,3,8,12,[8,8,6]],
+  ["Leg Press",null,2,10,15,[]]
  ],
  C:[
-  ['Lat Machine',50,3,8,12,[8,8,8]],
-  ['Chest Press',30,3,8,12,[]],
-  ['Shoulder Press con manubri',8,3,8,12,[]],
-  ['Leg Extension',0,2,10,15,[]],
-  ['Rematore con manubri',12,3,8,12,[]],
-  ['Tricipiti al cavo',15,2,10,15,[]],
-  ['Bicipiti con manubri',10,2,8,12,[]],
-  ['Addominali',0,2,10,15,[]]
+  ["Lat Machine presa stretta",null,3,8,12,[]],
+  ["Chest Press",30,3,8,12,[]],
+  ["Shoulder Press con manubri",8,3,8,12,[]],
+  ["Leg Extension",0,2,10,15,[]],
+  ["Rematore alla macchina",null,3,8,12,[]],
+  ["Tricipiti al cavo",15,2,10,15,[]],
+  ["Bicipiti con manubri",10,2,8,12,[]],
+  ["Addominali",0,2,10,15,[]]
  ]
 };
-const key='gymTrackerV1',draftKey='gymDraftsV2',cloudKey='gymCloudKeyV1';
+const legacyWorkoutNames={"A":["Chest Press","Croci con manubri su panca","Rematore con manubri","Shoulder Press con manubri","Tricipiti al cavo","Addominali"],"B":["Lat Machine","Chest Press","Leg Curl","Back Extension / Iperestensioni","Bicipiti con manubri","Squat a corpo libero"],"C":["Lat Machine","Chest Press","Shoulder Press con manubri","Leg Extension","Rematore con manubri","Tricipiti al cavo","Bicipiti con manubri","Addominali"]};
+const key='gymTrackerV1',draftKey='gymDraftsV3',cloudKey='gymCloudKeyV1';
 let day='A',data={history:[]},drafts={},workoutStart=null,timerId=null,lastDuration=null,cloudSecret=null,syncBusy=false,syncAgain=false,historyBroken=false;
 const $=id=>document.getElementById(id),esc=GymCore.escapeHtml;
 let restAudio=null;
@@ -57,7 +58,7 @@ function formatDuration(ms){const s=Math.max(0,Math.floor(ms/1000));return [Math
 function updateTimer(){$('timer').textContent=formatDuration(workoutStart?Date.now()-workoutStart:lastDuration||0);}
 function setWorkoutButton(){$('startWorkout').textContent=workoutStart?'■ Termina allenamento':'▶ Inizia allenamento';}
 function saveDraft(){
- drafts[day]={exercises:[...document.querySelectorAll('#exercises .card')].map((c,i)=>({...drafts[day]?.exercises?.[i],completed:c.querySelector('.exercise-complete').checked,weight:c.querySelector('.weight').value,reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value)})),notes:$('notes').value};
+ drafts[day]={exercises:[...document.querySelectorAll('#exercises .card')].map((c,i)=>({...drafts[day]?.exercises?.[i],name:workouts[day][i][0],completed:c.querySelector('.exercise-complete').checked,weight:c.querySelector('.weight').value,reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value)})),notes:$('notes').value};
  if(write(draftKey,{day,drafts,workoutStart,lastDuration}))status('Bozza salvata sul dispositivo');
 }
 function startWorkout(){workoutStart=Date.now();lastDuration=null;saveDraft();clearInterval(timerId);timerId=setInterval(updateTimer,1000);updateTimer();setWorkoutButton();}
@@ -66,8 +67,8 @@ function lastFor(name){for(const h of data.history){if(h.day!==day)continue;cons
 function render(){
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.day===day));$('dayTitle').textContent='Allenamento '+day;
  $('lastDate').textContent=data.history.find(h=>h.day===day)?.date||'—';$('exercises').innerHTML='';
- workouts[day].forEach((e,i)=>{const [name,initial,sets,min,max,startReps]=e,last=lastFor(name),draft=drafts[day]?.exercises?.[i],weight=draft?.weight??last?.weight??initial;const c=document.createElement('div');c.className='card';
- c.innerHTML=`<div class="name">${esc(name)}</div><div class="meta">Target: ${sets} × ${min}–${max}${initial?' · peso iniziale '+initial+' kg':''}</div><div class="weight-row"><label for="weight-${i}">Peso usato</label><input id="weight-${i}" aria-label="Peso ${esc(name)}" class="weight" inputmode="decimal" type="number" min="0" max="2000" step="0.5" value="${esc(weight)}"> kg</div><div class="inputs"><span class="lbl">Reps</span>${[0,1,2,3].map(j=>`<input aria-label="${esc(name)} serie ${j+1}" inputmode="numeric" type="number" min="0" max="1000" step="1" class="rep" value="${esc(draft?.reps?.[j]??'')}" placeholder="${j<sets?'reps':'—'}" ${j>=sets?'disabled':''}>`).join('')}</div><div class="startpoint">Partenza: ${initial?initial+' kg':'corpo libero'}${startReps.length?' — '+startReps.join(' / '):''}</div><div class="last">Ultimo allenamento: ${last?esc(last.weight+' kg — '+last.reps.map(r=>r??'—').join(' / ')):'nessun dato'}</div>${(()=>{const s=GymCore.suggestion(last,sets,min,max,last?.weight??initial);return `<div class="suggestion ${s.neutral?'neutral':''}">💡 ${esc(s.text)}</div>`;})()}`;
+ workouts[day].forEach((e,i)=>{const [name,initial,sets,min,max,startReps]=e,last=lastFor(name),draft=drafts[day]?.exercises?.[i],weight=draft?.weight??last?.weight??initial??'';const c=document.createElement('div');c.className='card';
+ c.innerHTML=`<div class="name">${esc(name)}</div><div class="meta">Target: ${sets} × ${min}–${max}${initial?' · peso iniziale '+initial+' kg':''}</div><div class="weight-row"><label for="weight-${i}">Peso usato</label><input id="weight-${i}" aria-label="Peso ${esc(name)}" class="weight" inputmode="decimal" type="number" min="0" max="2000" step="0.5" value="${esc(weight)}"> kg</div><div class="inputs"><span class="lbl">Reps</span>${[0,1,2,3].map(j=>`<input aria-label="${esc(name)} serie ${j+1}" inputmode="numeric" type="number" min="0" max="1000" step="1" class="rep" value="${esc(draft?.reps?.[j]??'')}" placeholder="${j<sets?'reps':'—'}" ${j>=sets?'disabled':''}>`).join('')}</div><div class="startpoint">Partenza: ${initial==null?'carico da impostare':initial?initial+' kg':'corpo libero'}${startReps.length?' — '+startReps.join(' / '):''}</div><div class="last">Ultimo allenamento: ${last?esc(last.weight+' kg — '+last.reps.map(r=>r??'—').join(' / ')):'nessun dato'}</div>${(()=>{const s=!last&&initial==null?{text:'Inserisci il carico usato per questo esercizio.',neutral:true}:GymCore.suggestion(last,sets,min,max,last?.weight??initial);return `<div class="suggestion ${s.neutral?'neutral':''}">💡 ${esc(s.text)}</div>`;})()}`;
  c.dataset.exercise=i;
  c.insertAdjacentHTML('beforeend',`<div class="rest-controls" role="group" aria-label="Recupero ${esc(name)}"><div class="rest-title">Recupero · <span class="rest-setting"></span></div><div class="rest-buttons"><button type="button" data-rest="minus" aria-label="Riduci recupero ${esc(name)} di 30 secondi">−30 s</button><output class="rest-countdown" aria-label="Timer ${esc(name)}"></output><button type="button" data-rest="plus" aria-label="Aumenta recupero ${esc(name)} di 30 secondi">+30 s</button><button type="button" data-rest="toggle">Avvia</button><button type="button" data-rest="reset">Reset</button></div></div><label class="complete-label"><input type="checkbox" class="exercise-complete" aria-label="${esc(name)} completato" ${draft?.completed?'checked':''}> Esercizio completato</label>`);
  $('exercises').appendChild(c);
@@ -76,7 +77,7 @@ function render(){
 function renderHistory(){const hs=data.history.filter(h=>h.day===day).slice(0,20);$('history').innerHTML=hs.length?hs.map(h=>`<div class="history"><b>${esc(h.date)}</b> · ${h.exercises.filter(e=>e.reps.some(r=>r!==null)).length} esercizi${h.duration?' · '+formatDuration(h.duration):''}<br><span class="small">${esc(h.notes)}</span></div>`).join(''):'<div class="small">Nessun allenamento salvato.</div>';}
 function saveWorkout(){
  if(historyBroken){status('Prima recupera o esporta lo storico non leggibile.');return;}
- let exercises;try{exercises=[...document.querySelectorAll('#exercises .card')].map((c,i)=>({name:workouts[day][i][0],weight:Number(c.querySelector('.weight').value),reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()===''?null:Number(x.value))}));
+ let exercises;try{for(const c of document.querySelectorAll('#exercises .card')){if([...c.querySelectorAll('.rep')].some(r=>!r.disabled&&r.value.trim()!=='')&&c.querySelector('.weight').value.trim()==='')throw Error('Inserisci il peso usato per '+workouts[day][Number(c.dataset.exercise)][0]);}exercises=[...document.querySelectorAll('#exercises .card')].map((c,i)=>({name:workouts[day][i][0],weight:Number(c.querySelector('.weight').value),reps:[...c.querySelectorAll('.rep')].filter(x=>!x.disabled).map(x=>x.value.trim()===''?null:Number(x.value))}));
  exercises=exercises.filter(e=>e.reps.some(r=>r!==null));if(!exercises.length)throw Error('Inserisci almeno una serie prima di salvare.');
  const h=GymCore.validateWorkout({id:crypto.randomUUID(),createdAt:new Date().toISOString(),day,date:new Date().toLocaleDateString('it-IT'),duration:workoutStart?Date.now()-workoutStart:lastDuration,exercises,notes:$('notes').value});
  const current=JSON.parse(localStorage.getItem(key)||'{"history":[]}').history.map(GymCore.validateWorkout);const next={history:GymCore.mergeHistory([h,...data.history],current)};if(!write(key,next))return;data=next;
@@ -105,7 +106,7 @@ async function syncCloud(){
  let offset=0,remote=[];while(true){const page=await cloudRequest({offset});remote.push(...await GymCore.normalizeHistory(page.workouts));if(!page.hasMore)break;offset+=page.workouts.length;if(offset>20000)throw Error('Storico troppo grande');}
  const next={history:GymCore.mergeHistory(data.history,remote)};if(!write(key,next))throw Error('Spazio sul dispositivo esaurito');data=next;renderHistory();$('lastDate').textContent=data.history.find(h=>h.day===day)?.date||'—';
  // Update suggestions without disturbing the draft or focus.
- [...document.querySelectorAll('#exercises .card')].forEach((c,i)=>{const e=workouts[day][i],last=lastFor(e[0]),s=GymCore.suggestion(last,e[2],e[3],e[4],last?.weight??e[1]);c.querySelector('.last').textContent='Ultimo allenamento: '+(last?last.weight+' kg — '+last.reps.map(r=>r??'—').join(' / '):'nessun dato');c.querySelector('.suggestion').textContent='💡 '+s.text;c.querySelector('.suggestion').classList.toggle('neutral',s.neutral);});
+ [...document.querySelectorAll('#exercises .card')].forEach((c,i)=>{const e=workouts[day][i],last=lastFor(e[0]),s=!last&&e[1]==null?{text:'Inserisci il carico usato per questo esercizio.',neutral:true}:GymCore.suggestion(last,e[2],e[3],e[4],last?.weight??e[1]);c.querySelector('.last').textContent='Ultimo allenamento: '+(last?last.weight+' kg — '+last.reps.map(r=>r??'—').join(' / '):'nessun dato');c.querySelector('.suggestion').textContent='💡 '+s.text;c.querySelector('.suggestion').classList.toggle('neutral',s.neutral);});
  $('cloudStatus').textContent='Storico sincronizzato ✓ · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
  }catch{$('cloudStatus').textContent='Cloud non raggiungibile · i dati restano sul dispositivo. Riprovo automaticamente.';}
  finally{syncBusy=false;if(syncAgain){syncAgain=false;syncCloud();}}
@@ -113,7 +114,9 @@ async function syncCloud(){
 async function initialize(){
  try{const raw=localStorage.getItem(key);data={history:await GymCore.normalizeHistory(raw?JSON.parse(raw).history:[])};if(raw&&!localStorage.getItem('gymTrackerOriginalBackupV2'))localStorage.setItem('gymTrackerOriginalBackupV2',raw);if(!write(key,data))historyBroken=true;}
  catch{historyBroken=true;status('Storico non leggibile. Usa Esporta dati per conservarlo; non è stato cancellato.');}
- try{const d=JSON.parse(localStorage.getItem(draftKey)||'{}');drafts=d.drafts||{};day=GymCore.DAYS.includes(d.day)?d.day:'A';workoutStart=d.workoutStart||Number(localStorage.getItem('gymWorkoutStart'))||null;lastDuration=d.lastDuration||null;}catch{status('Bozza non leggibile: lo storico è conservato.');}
+ try{const currentDraft=localStorage.getItem(draftKey);const d=JSON.parse(currentDraft||localStorage.getItem('gymDraftsV2')||'{}');drafts=d.drafts||{};
+ if(!currentDraft){drafts=Object.fromEntries(Object.entries(drafts).filter(([day])=>GymCore.DAYS.includes(day)).map(([day,draft])=>[day,{...draft,exercises:workouts[day].map(([name])=>{const index=legacyWorkoutNames[day].indexOf(name);return index<0?{name}:{...draft.exercises?.[index],name};})}]));}
+ day=GymCore.DAYS.includes(d.day)?d.day:'A';workoutStart=d.workoutStart||Number(localStorage.getItem('gymWorkoutStart'))||null;lastDuration=d.lastDuration||null;}catch{status('Bozza non leggibile: lo storico è conservato.');}
  try{cloudSecret=localStorage.getItem(cloudKey);if(!/^[a-f0-9]{64}$/.test(cloudSecret||'')){cloudSecret=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(cloudKey,cloudSecret);}}
  catch{cloudSecret=null;$('cloudStatus').textContent='Salvataggio cloud non disponibile: memoria del browser bloccata.';}
  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{saveDraft();day=b.dataset.day;render();write(draftKey,{day,drafts,workoutStart,lastDuration});});
