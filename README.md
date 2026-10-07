@@ -2,6 +2,14 @@
 
 Direct-access workout tracker at https://cryptclaw.github.io/gym-tracker/.
 
+## Workout plan update (7 October 2026)
+
+- Day A: incline dumbbell bench press replaces chest press.
+- Day B: leg press replaces bodyweight squat; dumbbell curls remain.
+- Day C: narrow-grip lat pulldown and machine row replace the previous variants.
+- Existing set/rep targets stay the same. New exercises require an entered load; old loads are not copied between different exercises.
+- Drafts migrate to V3 by matching exercise names. The original V2 draft remains on the device and completed history is unchanged.
+
 ## Saving and recovery
 
 - Drafts are saved on every input and survive changing workout days and reloading.
