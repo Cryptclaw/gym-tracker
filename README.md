@@ -15,17 +15,20 @@ Direct-access workout tracker at https://cryptclaw.github.io/gym-tracker/.
 - Drafts are saved on every input and survive changing workout days and reloading.
 - Each exercise has a recovery countdown (default 90 seconds, adjustable in 30-second steps from 30 seconds to 15 minutes), start/pause and reset. Deadlines and paused time survive reload and day changes. Completion produces a short sound when browser audio is available; closed/suspended mobile browsers cannot guarantee an audible alarm.
 - Each exercise has a completion checkbox and each day shows completed/total exercises. Checkboxes stay in the local draft and reset when that workout is saved or its draft is cleared.
-- Finished workouts are stored locally first. Failed cloud requests never delete local data; sync retries on reconnect and every minute.
+- **Salva allenamento** stores the completed workout locally and synchronizes automatically. The visible status distinguishes pending device-only records from confirmed cloud records. Confirmation requires reading back the same workout, not merely a successful write response.
+- Failed requests leave the workout pending across reload. Synchronization retries on reconnect, returning to the app and every 15 seconds while open. A save made during another request triggers a follow-up sync; stable IDs prevent duplicate retries.
+- App installations and browsers have separate storage until linked once. Under **App, browser e copie di sicurezza**, copy the private personal link from one opening and paste it into **Collega app o browser** in the other. The entire source cloud archive, local history and destination archive are merged and verified before switching the connection. A failed connection preserves the original archive identity.
 - Cloud storage uses a random 256-bit recovery key, generated on the device. There is no login. Treat the code and JSON backup as private credentials. A public URL alone cannot recover a private history.
 - The Edge Function hashes the recovery key and restricts every query to that hash. Database tables have RLS and no anonymous or authenticated access. The browser has no database admin key.
 - Workouts are append-only with stable IDs. Retries and restoring backups merge without duplicating sessions or deleting existing records.
 - Legacy `gymTrackerV1` history is migrated with deterministic IDs. Its original contents are also retained locally as `gymTrackerOriginalBackupV2`.
-- Export includes the recovery key, history and drafts. Import merges history. A recovery code connects another device without a username or password.
+- Export includes the recovery key, history and drafts. Import adds completed history to the current archive and never silently switches to the exported recovery key. Before import or linking, the last five safety snapshots are retained locally. **Recupera archivio precedente** restores the latest pre-import/link connection while retaining all current workouts; it does not delete already synchronized records. Drafts remain local.
+- History, archive identity and synchronization acknowledgments are committed together on the device. A local storage failure leaves entered workout data in the draft. Cross-tab changes are merged before writing; an in-flight request cannot switch back to an obsolete archive.
 - Offline app files are cached after the first successful online visit. New releases activate after old app tabs close.
 
 ## Tests and deployment
 
-Pinned tools are in `package.json` and `pnpm-lock.yaml`. Run `pnpm install --frozen-lockfile`, `pnpm test`, and `pnpm test:browser`. Browser tests use isolated data and a mock cloud; they do not alter real user history.
+Pinned tools are in `package.json` and `pnpm-lock.yaml`. Run `pnpm install --frozen-lockfile`, `pnpm test`, and `pnpm test:browser`. Browser tests use isolated data and a mock cloud; they do not alter real user history. Coverage includes read-back acknowledgment, durable pending retries, concurrent saves, local storage failure, pairing two archives, non-destructive import/recovery, plan migration and offline app upgrades.
 
 The Pages workflow publishes only after syntax, data and browser tests pass. The repository Pages source must be **GitHub Actions**, rather than direct branch publication. Only public app files are included in the deployment artifact.
 
